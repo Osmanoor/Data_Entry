@@ -52,7 +52,6 @@ def transcribe_audio(audio_file, language_code):
         elif result['status'] == 'failed':
             return "Transcription failed."
 
-        st.sleep(1)
 
 st.title("Audio Transcription Application")
 
