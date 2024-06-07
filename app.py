@@ -47,4 +47,25 @@ def transcribe_audio(audio_file, language_code):
         )
         result = result_response.json()
 
-        if result
+        if result['status'] == 'completed':
+            return result['text']
+        elif result['status'] == 'failed':
+            return "Transcription failed."
+
+        st.sleep(1)
+
+st.title("Audio Transcription Application")
+
+st.write("Upload a WAV audio file to get the transcription.")
+
+uploaded_file = st.file_uploader("Choose an audio file...", type=["wav"])
+
+language = st.selectbox("Select the language of the audio", ("en", "ar"))
+
+if uploaded_file is not None:
+    st.audio(uploaded_file, format='audio/wav')
+    if st.button("Transcribe"):
+        with st.spinner('Transcribing...'):
+            transcription = transcribe_audio(uploaded_file, language)
+            st.write("Transcription:")
+            st.write(transcription)
