@@ -1,38 +1,50 @@
 import streamlit as st
 import requests
 import json
+import tempfile
 
-# Deepgram API key
-API_KEY = '78991ac3114d0f0dbe2d518c028e1f5bce0a2723'
+# AssemblyAI API key
+API_KEY = '97fc12eb385d474aaddee82c27971132'
 
-def transcribe_audio(file):
+def transcribe_audio(audio_file, language_code):
+    # Upload audio file to AssemblyAI
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+        temp_audio.write(audio_file.read())
+        temp_audio.seek(0)
+
     headers = {
-        'Authorization': f'Token {API_KEY}',
-        'Content-Type': 'audio/ogg'  # Adjust this if you're using a different audio format
+        'authorization': API_KEY,
+        'content-type': 'application/json'
     }
 
-    response = requests.post(
-        'https://api.deepgram.com/v1/listen',
+    upload_response = requests.post(
+        'https://api.assemblyai.com/v2/upload',
         headers=headers,
-        data=file
+        files={'file': open(temp_audio.name, 'rb')}
     )
 
-    if response.status_code == 200:
-        result = response.json()
-        return result['results']['channels'][0]['alternatives'][0]['transcript']
-    else:
-        return "Transcription failed."
+    audio_url = upload_response.json()['upload_url']
 
-st.title("Audio Transcription Application")
+    # Request transcription
+    transcription_request = {
+        'audio_url': audio_url,
+        'language_code': language_code
+    }
 
-st.write("Upload an audio file to get the transcription.")
+    transcription_response = requests.post(
+        'https://api.assemblyai.com/v2/transcript',
+        headers=headers,
+        json=transcription_request
+    )
 
-uploaded_file = st.file_uploader("Choose an audio file...", type=["wav", "mp3", "ogg"])
+    transcript_id = transcription_response.json()['id']
 
-if uploaded_file is not None:
-    st.audio(uploaded_file, format='audio/wav')
-    if st.button("Transcribe"):
-        with st.spinner('Transcribing...'):
-            transcription = transcribe_audio(uploaded_file)
-            st.write("Transcription:")
-            st.write(transcription)
+    # Retrieve transcription result
+    while True:
+        result_response = requests.get(
+            f'https://api.assemblyai.com/v2/transcript/{transcript_id}',
+            headers=headers
+        )
+        result = result_response.json()
+
+        if result
