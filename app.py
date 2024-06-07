@@ -8,7 +8,7 @@ API_KEY = '78991ac3114d0f0dbe2d518c028e1f5bce0a2723'
 def transcribe_audio(file):
     headers = {
         'Authorization': f'Token {API_KEY}',
-        'Content-Type': 'audio/wav'  # Adjust this if you're using a different audio format
+        'Content-Type': 'audio/ogg'  # Adjust this if you're using a different audio format
     }
 
     response = requests.post(
