@@ -1,61 +1,27 @@
 import streamlit as st
 import requests
 import json
-import tempfile
-from pydub import AudioSegment
 
-# AssemblyAI API key
-API_KEY = '97fc12eb385d474aaddee82c27971132'
+# Deepgram API key
+API_KEY = '78991ac3114d0f0dbe2d518c028e1f5bce0a2723'
 
-def transcribe_audio(audio_file, language_code):
-    # Upload audio file to AssemblyAI
-    with tempfile.NamedTemporaryFile(delete=False) as temp_audio:
-        temp_audio.write(audio_file.read())
-        temp_audio.seek(0)
-        audio = AudioSegment.from_file(temp_audio.name)
-        audio.export(temp_audio.name, format="wav")
-
+def transcribe_audio(file):
     headers = {
-        'authorization': API_KEY,
-        'content-type': 'application/json'
+        'Authorization': f'Token {API_KEY}',
+        'Content-Type': 'audio/wav'  # Adjust this if you're using a different audio format
     }
 
-    upload_response = requests.post(
-        'https://api.assemblyai.com/v2/upload',
+    response = requests.post(
+        'https://api.deepgram.com/v1/listen',
         headers=headers,
-        files={'file': open(temp_audio.name, 'rb')}
+        data=file
     )
 
-    audio_url = upload_response.json()['upload_url']
-
-    # Request transcription
-    transcription_request = {
-        'audio_url': audio_url,
-        'language_code': language_code
-    }
-
-    transcription_response = requests.post(
-        'https://api.assemblyai.com/v2/transcript',
-        headers=headers,
-        json=transcription_request
-    )
-
-    transcript_id = transcription_response.json()['id']
-
-    # Retrieve transcription result
-    while True:
-        result_response = requests.get(
-            f'https://api.assemblyai.com/v2/transcript/{transcript_id}',
-            headers=headers
-        )
-        result = result_response.json()
-
-        if result['status'] == 'completed':
-            return result['text']
-        elif result['status'] == 'failed':
-            return "Transcription failed."
-
-        st.sleep(1)
+    if response.status_code == 200:
+        result = response.json()
+        return result['results']['channels'][0]['alternatives'][0]['transcript']
+    else:
+        return "Transcription failed."
 
 st.title("Audio Transcription Application")
 
@@ -63,12 +29,10 @@ st.write("Upload an audio file to get the transcription.")
 
 uploaded_file = st.file_uploader("Choose an audio file...", type=["wav", "mp3", "ogg"])
 
-language = st.selectbox("Select the language of the audio", ("en", "ar"))
-
 if uploaded_file is not None:
     st.audio(uploaded_file, format='audio/wav')
     if st.button("Transcribe"):
         with st.spinner('Transcribing...'):
-            transcription = transcribe_audio(uploaded_file, language)
+            transcription = transcribe_audio(uploaded_file)
             st.write("Transcription:")
             st.write(transcription)
